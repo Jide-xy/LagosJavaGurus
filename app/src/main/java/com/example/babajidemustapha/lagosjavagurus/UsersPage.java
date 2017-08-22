@@ -206,7 +206,7 @@ public class UsersPage extends AppCompatActivity {
                 conn.setDoInput(true);
                 conn.connect();
                 if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                    Log.e("value ", "here");
+                    Log.e("page ", ""+ pages);
                     InputStream res = conn.getInputStream();
                     BufferedReader reader = new BufferedReader(new InputStreamReader(res));
                     String json = reader.readLine();
@@ -380,7 +380,11 @@ public class UsersPage extends AppCompatActivity {
                 Cursor cursor = db.rawQuery("Select IMAGE from USER ", null);
                 if(cursor != null && cursor.getCount() >0) {
                     while (cursor.moveToNext()) {
-                        deleteImage(cursor.getColumnName(cursor.getColumnIndex("IMAGE")));
+                        if( !deleteImage(cursor.getColumnName(cursor.getColumnIndex("IMAGE")))){
+                           Toast.makeText(UsersPage.this,"Failed to delete image",Toast.LENGTH_SHORT).show();
+                            break;
+                        }
+
                     }
                 }
                 cursor.close();

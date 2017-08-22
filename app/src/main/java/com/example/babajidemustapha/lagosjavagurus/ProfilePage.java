@@ -1,9 +1,11 @@
 package com.example.babajidemustapha.lagosjavagurus;
 
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.support.v4.content.FileProvider;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.support.v7.app.AppCompatActivity;
@@ -23,6 +25,8 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.load.resource.bitmap.BitmapTransitionOptions;
 import com.bumptech.glide.load.resource.bitmap.CircleCrop;
 import com.bumptech.glide.request.RequestOptions;
+
+import java.io.File;
 
 
 public class ProfilePage extends AppCompatActivity {
@@ -89,14 +93,25 @@ public class ProfilePage extends AppCompatActivity {
 
     }
     public void share(View view){
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.putExtra(Intent.EXTRA_TEXT,"Check out this amazing developer @"+ name +", "+link);
-        intent.setType("text/plain");
-        if(intent.resolveActivity(getPackageManager()) != null){
-            startActivity(intent);
+        try {
+            Log.e("dd" ,this.getFilesDir().getPath());
+            Uri contentUri = FileProvider.getUriForFile(getApplicationContext(), "com.example.babajidemustapha.lagosjavagurus", new File(imgPath));
+            this.grantUriPermission("com.example.babajidemustapha.lagosjavagurus", contentUri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.putExtra(Intent.EXTRA_TEXT, "Check out this amazing developer @" + name + ", " + link);
+            intent.putExtra(Intent.EXTRA_STREAM, contentUri);
+            intent.setType("image/*");
+
+
+            if (intent.resolveActivity(getPackageManager()) != null) {
+                startActivity(intent);
+            } else {
+                Toast.makeText(ProfilePage.this, "No App found", Toast.LENGTH_SHORT).show();
+            }
         }
-        else{
-            Toast.makeText(ProfilePage.this,"Browser not found",Toast.LENGTH_SHORT).show();
+        catch (Exception e){
+            Log.e("message", e.getMessage());
+            //e.printStackTrace();
         }
     }
 
