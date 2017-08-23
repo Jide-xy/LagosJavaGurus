@@ -5,13 +5,17 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -55,7 +59,6 @@ public class UsersPage extends AppCompatActivity {
     String response;
     URL address;
     JSONObject result;
-    //ListView listview;
     RecyclerView recyclerView;
     List<User> users;
     LinearLayout items_layout;
@@ -80,7 +83,7 @@ public class UsersPage extends AppCompatActivity {
         progressBar = (ProgressBar) findViewById(R.id.progressbar);
         linearLayoutManager = new LinearLayoutManager(UsersPage.this);
         recyclerView.setLayoutManager(linearLayoutManager);
-        recyclerView.setVerticalScrollBarEnabled(true);
+        recyclerView.addItemDecoration(new DividerItemDecoration(UsersPage.this));
         placeholder = RoundedBitmapDrawableFactory.create(getResources(),BitmapFactory.decodeResource(getResources(),R.drawable.github_mark));
         placeholder.setCircular(true);
         items_layout = (LinearLayout) findViewById(R.id.items_layout);
@@ -156,11 +159,13 @@ public class UsersPage extends AppCompatActivity {
         }
     }
 
-    private boolean deleteImage(String imgname) {
-        ContextWrapper cw = new ContextWrapper(getApplicationContext());
-        File directory = cw.getDir("images", Context.MODE_PRIVATE);
-        File mypath = new File(directory, imgname + ".png");
-        return mypath.delete();
+    private boolean deleteImage(String imgPath) {
+        File myPath = new File(imgPath);
+        try {
+            return myPath.delete();
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     private String getImagePath(String imgname) {
@@ -377,10 +382,10 @@ public class UsersPage extends AppCompatActivity {
         private void emptyTable() {
             SQLiteDatabase db = this.getWritableDatabase();
             try {
-                Cursor cursor = db.rawQuery("Select IMAGE from USER ", null);
+                Cursor cursor = db.rawQuery("Select FILE from USER", null);
                 if(cursor != null && cursor.getCount() >0) {
                     while (cursor.moveToNext()) {
-                        if( !deleteImage(cursor.getColumnName(cursor.getColumnIndex("IMAGE")))){
+                        if (!deleteImage(cursor.getString(cursor.getColumnIndex("FILE")))) {
                            Toast.makeText(UsersPage.this,"Failed to delete image",Toast.LENGTH_SHORT).show();
                             break;
                         }
@@ -472,6 +477,48 @@ RequestOptions settings = new RequestOptions()
                 intent.putExtra("avatarUrl", source.get(getAdapterPosition()).getAvi());
                 intent.putExtra("filePath", source.get(getAdapterPosition()).getFile());
                 startActivity(intent);
+            }
+        }
+    }
+
+    public class DividerItemDecoration extends RecyclerView.ItemDecoration {
+
+        private final int[] ATTRS = new int[]{android.R.attr.listDivider};
+
+        private Drawable divider;
+
+        /**
+         * Default divider will be used
+         */
+        public DividerItemDecoration(Context context) {
+            final TypedArray styledAttributes = context.obtainStyledAttributes(ATTRS);
+            divider = styledAttributes.getDrawable(0);
+            styledAttributes.recycle();
+        }
+
+        /**
+         * Custom divider will be used
+         */
+        public DividerItemDecoration(Context context, int resId) {
+            divider = ContextCompat.getDrawable(context, resId);
+        }
+
+        @Override
+        public void onDraw(Canvas c, RecyclerView parent, RecyclerView.State state) {
+            int left = parent.getPaddingLeft();
+            int right = parent.getWidth() - parent.getPaddingRight();
+
+            int childCount = parent.getChildCount();
+            for (int i = 0; i < childCount; i++) {
+                View child = parent.getChildAt(i);
+
+                RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
+
+                int top = child.getBottom() + params.bottomMargin;
+                int bottom = top + divider.getIntrinsicHeight();
+
+                divider.setBounds(left, top, right, bottom);
+                divider.draw(c);
             }
         }
     }
