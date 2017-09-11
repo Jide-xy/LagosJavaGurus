@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.babajidemustapha.lagosjavagurus.ProfilePage"
-    android:background="@drawable/github_mark">
+    android:background="@drawable/github_mark"
+    tools:context="com.example.babajidemustapha.lagosjavagurus.ProfilePage">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center"
+        android:background="#EE212121"
         android:gravity="center"
-        android:orientation="vertical"
-        android:background="#EE212121">
+        android:orientation="vertical">
         <ImageView
             android:id="@+id/avatar"
             android:layout_width="250dp"
@@ -24,28 +23,38 @@
             android:id="@+id/username"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="\@blablabla"
             android:layout_gravity="center"
-            android:textSize="30sp"
-            android:textStyle="bold"
-            android:textColor="#E0E0E0"
+            android:layout_marginBottom="10dp"
             android:gravity="center"
-            android:layout_marginBottom="10dp"/>
+            android:text="\@blablabla"
+            android:textColor="#E0E0E0"
+            android:textSize="30sp"
+            android:textStyle="bold" />
         <TextView
             android:id="@+id/link"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
+            android:layout_marginBottom="20dp"
+            android:text="http:\/\/github.com\/*"
             android:textSize="20sp"
-            android:textStyle="italic"
-            android:text="http:\/\/github.com\/mohyeen"
-            android:layout_marginBottom="20dp"/>
+            android:textStyle="italic" />
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="share"
             android:layout_gravity="center"
+            android:background="@drawable/custom_button"
             android:onClick="share"
-            android:background="@drawable/custom_button"/>
+            android:text="share" />
+        <!--<android.support.design.widget.FloatingActionButton-->
+        <!--android:id="@+id/fab"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_gravity="bottom|end"-->
+        <!--android:layout_margin="5dp"-->
+        <!--app:srcCompat="@android:drawable/ic_menu_share"-->
+        <!--android:onClick="share"-->
+        <!--android:background="@drawable/custom_button"-->
+        <!--/>-->
     </LinearLayout>
 </LinearLayout>

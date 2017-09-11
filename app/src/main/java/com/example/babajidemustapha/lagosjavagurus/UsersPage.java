@@ -4,8 +4,8 @@ import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -15,14 +15,17 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -83,7 +86,7 @@ public class UsersPage extends AppCompatActivity {
         progressBar = (ProgressBar) findViewById(R.id.progressbar);
         linearLayoutManager = new LinearLayoutManager(UsersPage.this);
         recyclerView.setLayoutManager(linearLayoutManager);
-        recyclerView.addItemDecoration(new DividerItemDecoration(UsersPage.this));
+        recyclerView.addItemDecoration(new DividerItemDecoration(UsersPage.this, R.drawable.divider));
         placeholder = RoundedBitmapDrawableFactory.create(getResources(),BitmapFactory.decodeResource(getResources(),R.drawable.github_mark));
         placeholder.setCircular(true);
         items_layout = (LinearLayout) findViewById(R.id.items_layout);
@@ -95,7 +98,6 @@ public class UsersPage extends AppCompatActivity {
             public void onRefresh() {
                 pages = 1;
                 loading = true;
-              //  doNext();
                 new LoadUsers().execute(query);
                 swipe.setRefreshing(false);
             }
@@ -123,7 +125,9 @@ public class UsersPage extends AppCompatActivity {
     }
     public void doNext(){
         try {
+            //totalcount is not 0 if successfully visited internet to fetch data
             if (totalcount != 0) {
+                //check if there's still more data to be fetched online
                 if ((pages * per_page) <= totalcount) {
                     pages++;
                     new LoadUsers().execute(query + "&page=" + pages);
@@ -132,10 +136,10 @@ public class UsersPage extends AppCompatActivity {
                     loading = true;
                 }
             }
+            //if totalcount is 0 then we've not visited internet yet. Try to load offline
             else {
                 pages++;
                 new LoadCachedUsers().execute();
-               // Toast.makeText(getApplicationContext(), "Showing cached data. Refresh to load from internet", Toast.LENGTH_SHORT).show();
             }
         }
         catch (Exception e){
@@ -168,6 +172,7 @@ public class UsersPage extends AppCompatActivity {
         }
     }
 
+    @NonNull
     private String getImagePath(String imgname) {
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
         return new File(cw.getDir("images", Context.MODE_PRIVATE), imgname + ".png").getAbsolutePath();
@@ -203,12 +208,11 @@ public class UsersPage extends AppCompatActivity {
                 address = new URL(url[0]);
                 Log.e("connection : ", url[0]);
                 HttpURLConnection conn = (HttpURLConnection) address.openConnection();
-               //  Log.e("connection code: ", conn.getResponseMessage());
-               // Log.e("connection code: ", "" +HttpURLConnection.HTTP_OK);
                 conn.setConnectTimeout(20000);
                 conn.setReadTimeout(20000);
                 conn.setRequestMethod("GET");
                 conn.setDoInput(true);
+
                 conn.connect();
                 if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
                     Log.e("page ", ""+ pages);
@@ -228,7 +232,6 @@ public class UsersPage extends AppCompatActivity {
                         apiLimit = false;
                         result = (JSONObject) new JSONTokener(response).nextValue();
                         JSONArray items = result.getJSONArray("items");
-                 //       count = (per_page * (pages - 1)) + items.length();
                         totalcount = Integer.parseInt(result.getString("total_count"));
                         if(items.length() > 0) {
                             for (int i = 0; i < items.length(); i++) {
@@ -236,9 +239,12 @@ public class UsersPage extends AppCompatActivity {
                                 String picUrl = obj.getString("avatar_url");
                                 try {
                                     String imgName = new SimpleDateFormat("ddMMyyyyHHmmss:SSSS").format(new Date());
+                                    int px = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80, getResources().getDisplayMetrics());
+                                    //write image to disk
                                     saveImage(imgName,
-                                            Glide.with(UsersPage.this).asBitmap().apply(saveSettings).load(picUrl).submit(320, 320).get());
+                                            Glide.with(UsersPage.this).asBitmap().apply(saveSettings).load(picUrl).submit(px, px).get());
                                     Log.e("path", picUrl);
+                                    //store user info and image path offline
                                     dbHelper.insertUser(obj.getString("login"), obj.getString("html_url"), picUrl, getImagePath(imgName));
                                 } catch (Exception e) {
                                     e.printStackTrace();
@@ -254,6 +260,7 @@ public class UsersPage extends AppCompatActivity {
                         apiLimit = true;
                     }
                 } else {
+                    failed = true;
                     Log.e("error", "No Internet");
                 }
                 conn.disconnect();
@@ -268,8 +275,10 @@ public class UsersPage extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Void a) {
-           new LoadCachedUsers().execute();
+            //check if successfully visited and returned from internet
             if (!failed) {
+                //if yes data is already stored offline, load from there
+                new LoadCachedUsers().execute();
                 if (apiLimit) {
                     Toast.makeText(UsersPage.this, "API Limit Exceeded. Please Try later", Toast.LENGTH_SHORT).show();
                 }
@@ -279,18 +288,42 @@ public class UsersPage extends AppCompatActivity {
                 else{
                     progressBar.setVisibility(View.GONE);
                 }
+                loading = false;
             }
             else {
+                //internet not available or timeout error handling
                 if(pages <=1) {
+                    //if error occurred on trip to internet for the first time using app show error dialog
                     pDialog.dismiss();
+                    AlertDialog.Builder builder;
+
+                    builder = new AlertDialog.Builder(UsersPage.this);
+
+                    builder.setTitle("Failed to connect")
+                            .setMessage("Try again?")
+                            .setPositiveButton("RETRY", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    new LoadUsers().execute(query + "&page=" + pages);
+                                }
+                            })
+                            .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    finish();
+                                }
+                            })
+                            .setIcon(android.R.drawable.ic_dialog_alert)
+                            .show();
                 }
                 else{
+                    //else just hide loading footer and show a toast
                     progressBar.setVisibility(View.GONE);
+                    Toast.makeText(UsersPage.this, "Failed to load new data", Toast.LENGTH_SHORT).show();
+                    pages--;
+                    loading = true;
                 }
-               Toast.makeText(UsersPage.this,"Failed to load new data",Toast.LENGTH_SHORT).show();
-                pages--;
+
             }
-            loading = false;
+
         }
     }
 
@@ -301,6 +334,7 @@ public class UsersPage extends AppCompatActivity {
         protected Void doInBackground(Void... params) {
             dbHelper = new UsersDatabase();
             if(pages <= 1) {
+                //at first load initialize list and try to load fetch all cached user
                 users = new ArrayList<>();
                 cursor = dbHelper.getAllUsers();
                 while(cursor.moveToNext()){
@@ -312,6 +346,7 @@ public class UsersPage extends AppCompatActivity {
 
             }
             else{
+                //subsequent loads adds freshly loaded data to former list
                     cursor = dbHelper.getReadableDatabase().rawQuery("SELECT * FROM USER LIMIT 20 OFFSET "+ ((pages-1) * per_page), null);
                     while(cursor.moveToNext()){
                         adapter.add(new User(cursor.getString(cursor.getColumnIndex("NAME")),
@@ -327,6 +362,7 @@ public class UsersPage extends AppCompatActivity {
         protected void onPostExecute(Void a){
             if(pages<=1) {
                 if(cursor.getCount()==0){
+                    //at first load if query turns up n result, attempt to visit internet
                     try {
                         new LoadUsers().execute(query);
                     }
@@ -335,23 +371,27 @@ public class UsersPage extends AppCompatActivity {
                     }
                 }
                 else {
+                    //else initialise and set adapter and calculate offset
                     adapter = new CustomAdapter1(UsersPage.this, users);
                     recyclerView.setAdapter(adapter);
                     loading = false;
-                //    pages = cursor.getCount() / per_page;
+                    pages = cursor.getCount() / per_page;
                 }
             }
             else{
                 if(cursor.getCount() != 0 ) {
+                    //on subsequent loads if query isn't empty and data has been added to list, notify recyclerview of data change
                     adapter.notifyDataSetChanged();
                     loading = false;
                 }
                 else{
+                    //else query turned up no result
                     if(!dataEnd) {
+                        //if data from internet isn't exhausted, attempt to visit internet
                         new LoadUsers().execute(query + "&page=" + pages);
                     }
                     else{
-                        Toast.makeText(UsersPage.this,"data end",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(UsersPage.this, "No more users", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -413,7 +453,7 @@ public class UsersPage extends AppCompatActivity {
 
         private Cursor getAllUsers() {
             SQLiteDatabase db = this.getReadableDatabase();
-            return db.query("USER",null,null,null,null,null,null,"20");
+            return db.query("USER", null, null, null, null, null, null);
         }
     }
 
@@ -483,18 +523,18 @@ RequestOptions settings = new RequestOptions()
 
     public class DividerItemDecoration extends RecyclerView.ItemDecoration {
 
-        private final int[] ATTRS = new int[]{android.R.attr.listDivider};
+//        private final int[] ATTRS = new int[]{android.R.attr.listDivider};
 
         private Drawable divider;
 
-        /**
-         * Default divider will be used
-         */
-        public DividerItemDecoration(Context context) {
-            final TypedArray styledAttributes = context.obtainStyledAttributes(ATTRS);
-            divider = styledAttributes.getDrawable(0);
-            styledAttributes.recycle();
-        }
+//        /**
+//         * Default divider will be used
+//         */
+//        public DividerItemDecoration(Context context) {
+//            final TypedArray styledAttributes = context.obtainStyledAttributes(ATTRS);
+//            divider = styledAttributes.getDrawable(0);
+//            styledAttributes.recycle();
+//        }
 
         /**
          * Custom divider will be used

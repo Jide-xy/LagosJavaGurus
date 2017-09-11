@@ -1,15 +1,13 @@
 package com.example.babajidemustapha.lagosjavagurus;
 
-import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Bundle;
 import android.support.v4.content.FileProvider;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.method.LinkMovementMethod;
@@ -52,7 +50,7 @@ public class ProfilePage extends AppCompatActivity {
         username = (TextView) findViewById(R.id.username);
         url = (TextView) findViewById(R.id.link);
         img = (ImageView) findViewById(R.id.avatar);
-        username.setText("@"+name);
+        username.setText("@" + name);
         SpannableString clickableLink = new SpannableString(link);
         clickableLink.setSpan(new URLSpan(link){
             @Override
@@ -115,4 +113,6 @@ public class ProfilePage extends AppCompatActivity {
         }
     }
 
+    public void viewRepo(View view) {
+    }
 }
